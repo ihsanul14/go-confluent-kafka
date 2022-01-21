@@ -56,6 +56,65 @@ func addMsg(producer *kafka.AvroProducer, schema string) {
 }
 ```
 
+## Producer with Plain SASL - SSL
+
+```
+package main
+
+import (
+	"flag"
+	"fmt"
+	"gitlab.com/ihsanul14/go-confluent-kafka"
+	"time"
+)
+
+var kafkaServers = []string{"localhost:9092"}
+var schemaRegistryServers = []string{"https://localhost:8081"}
+var topic = "test"
+
+func main() {
+	var n int
+	schema := `{
+				"type": "record",
+				"name": "Example",
+				"fields": [
+					{"name": "Id", "type": "string"},
+					{"name": "Type", "type": "string"},
+					{"name": "Data", "type": "string"}
+				]
+			}`
+
+    username:= "confluent username"
+    password:= "confluent password"
+
+    tlsConfig := &tls.Config{}
+	producer, err := kafka.NewAvroProducerPlainSASL(kafkaServers, schemaRegistryServers, username, password, tlsConfig)
+	if err != nil {
+		fmt.Printf("Could not create avro producer: %s", err)
+	}
+	flag.IntVar(&n, "n", 1, "number")
+	flag.Parse()
+	for i := 0; i < n; i++ {
+		fmt.Println(i)
+		addMsg(producer, schema)
+	}
+}
+
+func addMsg(producer *kafka.AvroProducerPlainSASL, schema string) {
+	value := `{
+		"Id": "1",
+		"Type": "example_type",
+		"Data": "example_data"
+	}`
+	key := time.Now().String()
+	err := producer.Add(topic, schema, []byte(value))
+	fmt.Println(key)
+	if err != nil {
+		fmt.Printf("Could not add a msg: %s", err)
+	}
+}
+```
+
 ## Consumer
 ```
 package main
