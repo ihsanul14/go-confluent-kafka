@@ -6,9 +6,18 @@ import (
 	"os/signal"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/linkedin/goavro"
 )
+
+type AvroConsumerConfig struct {
+	KafkaServers          []string
+	SchemaRegistryServers []string
+	Topic                 string
+	GroupId               string
+	Callbacks             ConsumerCallbacks
+	SASL                  *SASLConfig
+}
 
 type avroConsumer struct {
 	Consumer             *cluster.Consumer
@@ -32,29 +41,28 @@ type Message struct {
 }
 
 // avroConsumer is a basic consumer to interact with schema registry, avro and kafka
-func NewAvroConsumer(kafkaServers []string, schemaRegistryServers []string,
-	topic string, groupId string, callbacks ConsumerCallbacks) (*avroConsumer, error) {
+func NewAvroConsumer(cfg AvroConsumerConfig) (*avroConsumer, error) {
 	// init (custom) config, enable errors and notifications
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
 	config.Group.Return.Notifications = true
 	//read from beginning at the first time
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	topics := []string{topic}
-	consumer, err := cluster.NewConsumer(kafkaServers, groupId, topics, config)
+	topics := []string{cfg.Topic}
+	consumer, err := cluster.NewConsumer(cfg.KafkaServers, cfg.GroupId, topics, config)
 	if err != nil {
 		return nil, err
 	}
 
-	schemaRegistryClient := NewCachedSchemaRegistryClient(schemaRegistryServers)
+	schemaRegistryClient := NewCachedSchemaRegistryClient(cfg.SchemaRegistryServers, cfg.SASL)
 	return &avroConsumer{
 		consumer,
 		schemaRegistryClient,
-		callbacks,
+		cfg.Callbacks,
 	}, nil
 }
 
-//GetSchemaId get schema id from schema-registry service
+// GetSchemaId get schema id from schema-registry service
 func (ac *avroConsumer) GetSchema(id int) (*goavro.Codec, error) {
 	codec, err := ac.SchemaRegistryClient.GetSchema(id)
 	if err != nil {

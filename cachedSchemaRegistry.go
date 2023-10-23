@@ -1,8 +1,9 @@
 package kafka
 
 import (
-	"github.com/linkedin/goavro"
 	"sync"
+
+	"github.com/linkedin/goavro"
 )
 
 // CachedSchemaRegistryClient is a schema registry client that will cache some data to improve performance
@@ -12,15 +13,16 @@ type CachedSchemaRegistryClient struct {
 	schemaCacheLock      sync.RWMutex
 	schemaIdCache        map[string]int
 	schemaIdCacheLock    sync.RWMutex
+	SASL                 *SASLConfig
 }
 
-func NewCachedSchemaRegistryClient(connect []string) *CachedSchemaRegistryClient {
-	SchemaRegistryClient := NewSchemaRegistryClient(connect)
+func NewCachedSchemaRegistryClient(connect []string, saslConfig *SASLConfig) *CachedSchemaRegistryClient {
+	SchemaRegistryClient := NewSchemaRegistryClient(connect, saslConfig)
 	return &CachedSchemaRegistryClient{SchemaRegistryClient: SchemaRegistryClient, schemaCache: make(map[int]*goavro.Codec), schemaIdCache: make(map[string]int)}
 }
 
-func NewCachedSchemaRegistryClientWithRetries(connect []string, retries int) *CachedSchemaRegistryClient {
-	SchemaRegistryClient := NewSchemaRegistryClientWithRetries(connect, retries)
+func NewCachedSchemaRegistryClientWithRetries(connect []string, retries int, saslConfig *SASLConfig) *CachedSchemaRegistryClient {
+	SchemaRegistryClient := NewSchemaRegistryClientWithRetries(connect, retries, saslConfig)
 	return &CachedSchemaRegistryClient{SchemaRegistryClient: SchemaRegistryClient, schemaCache: make(map[int]*goavro.Codec), schemaIdCache: make(map[string]int)}
 }
 

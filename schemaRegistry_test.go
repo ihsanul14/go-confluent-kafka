@@ -3,12 +3,13 @@ package kafka
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/linkedin/goavro"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/linkedin/goavro"
 )
 
 type TestObject struct {
@@ -101,7 +102,10 @@ func TestSchemaRegistryClient_Retries(t *testing.T) {
 			fmt.Fprintf(w, string(str))
 		}
 	}))
-	SchemaRegistryClient := NewSchemaRegistryClientWithRetries([]string{mockServer.URL}, 2)
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	SchemaRegistryClient := NewSchemaRegistryClientWithRetries([]string{mockServer.URL}, 2, saslConfig)
 	subjects, err := SchemaRegistryClient.GetSubjects()
 	if err != nil {
 		t.Errorf("Found error %s", err)
@@ -119,7 +123,10 @@ func TestSchemaRegistryClient_Error(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error_code": 500, "message": "Error in the backend datastore"}`, 500)
 	}))
-	SchemaRegistryClient := NewSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	SchemaRegistryClient := NewSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	_, err := SchemaRegistryClient.GetSubjects()
 	expectedErr := Error{500, "Error in the backend datastore"}
 	if err.Error() != expectedErr.Error() {

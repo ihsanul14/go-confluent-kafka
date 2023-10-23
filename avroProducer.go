@@ -1,32 +1,56 @@
 package kafka
 
 import (
+	"crypto/tls"
 	"encoding/binary"
 
 	"github.com/Shopify/sarama"
 	"github.com/linkedin/goavro"
 )
 
+type AvroProducerConfig struct {
+	KafkaServers          []string
+	SchemaRegistryServers []string
+	SASL                  *SASLConfig
+}
+
 type AvroProducer struct {
 	producer             sarama.SyncProducer
 	schemaRegistryClient *CachedSchemaRegistryClient
+	SASL                 *SASLConfig
+}
+
+type SASLConfig struct {
+	Username  string
+	Password  string
+	TLSConfig *tls.Config
 }
 
 // NewAvroProducer is a basic producer to interact with schema registry, avro and kafka
-func NewAvroProducer(kafkaServers []string, schemaRegistryServers []string) (*AvroProducer, error) {
+func NewAvroProducer(cfg AvroProducerConfig) (*AvroProducer, error) {
 	config := sarama.NewConfig()
 	config.Producer.Partitioner = sarama.NewRandomPartitioner
 	config.Producer.Return.Successes = true
 	config.Producer.RequiredAcks = sarama.WaitForAll
-	producer, err := sarama.NewSyncProducer(kafkaServers, config)
+
+	if cfg.SASL != nil {
+		config.Net.SASL.Enable = true
+		config.Net.SASL.User = cfg.SASL.Username
+		config.Net.SASL.Password = cfg.SASL.Password
+		config.Net.SASL.Handshake = true
+		config.Net.SASL.Mechanism = sarama.SASLTypePlaintext
+		config.Net.TLS.Enable = true
+		config.Net.TLS.Config = cfg.SASL.TLSConfig
+	}
+	producer, err := sarama.NewSyncProducer(cfg.KafkaServers, config)
 	if err != nil {
 		return nil, err
 	}
-	schemaRegistryClient := NewCachedSchemaRegistryClient(schemaRegistryServers)
-	return &AvroProducer{producer, schemaRegistryClient}, nil
+	schemaRegistryClient := NewCachedSchemaRegistryClient(cfg.SchemaRegistryServers, cfg.SASL)
+	return &AvroProducer{producer, schemaRegistryClient, cfg.SASL}, nil
 }
 
-//GetSchemaId get schema id from schema-registry service
+// GetSchemaId get schema id from schema-registry service
 func (ap *AvroProducer) GetSchemaId(topic string, avroCodec *goavro.Codec) (int, error) {
 	schemaId, err := ap.schemaRegistryClient.CreateSubject(topic, avroCodec)
 	if err != nil {
@@ -37,6 +61,9 @@ func (ap *AvroProducer) GetSchemaId(topic string, avroCodec *goavro.Codec) (int,
 
 func (ap *AvroProducer) Add(topic string, schema string, value []byte) error {
 	avroCodec, err := goavro.NewCodec(schema)
+	if err != nil {
+		return err
+	}
 	schemaId, err := ap.GetSchemaId(topic, avroCodec)
 	if err != nil {
 		return err
