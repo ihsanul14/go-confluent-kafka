@@ -84,11 +84,16 @@ func main() {
 				]
 			}`
 
-    username:= "confluent username"
-    password:= "confluent password"
-
-    tlsConfig := &tls.Config{}
-	producer, err := kafka.NewAvroProducerPlainSASL(kafkaServers, schemaRegistryServers, username, password, tlsConfig)
+	var config = &AvroProducerConfig{
+		KafkaServers : kafkaServers,
+		SchemaRegistryServers: schemaRegistryServers,
+		SASL: &SASLConfig{
+			Username: "username",
+			Password: "password",
+			TLSConfig: &tls.Config{}
+		}
+	}
+	producer, err := kafka.NewAvroProducer(config)
 	if err != nil {
 		fmt.Printf("Could not create avro producer: %s", err)
 	}
@@ -100,7 +105,7 @@ func main() {
 	}
 }
 
-func addMsg(producer *kafka.AvroProducerPlainSASL, schema string) {
+func addMsg(producer *kafka.AvroProducer, schema string) {
 	value := `{
 		"Id": "1",
 		"Type": "example_type",

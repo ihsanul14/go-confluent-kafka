@@ -8,7 +8,10 @@ func TestCachedSchemaRegistryClient_GetSchema(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	client.GetSchema(1)
 	responseCodec, err := client.GetSchema(1)
 	if nil != err {
@@ -26,7 +29,10 @@ func TestCachedSchemaRegistryClient_GetSubjects(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	subjects, err := client.GetSubjects()
 	if nil != err {
 		t.Errorf("Error getting subjects: %v", err)
@@ -40,7 +46,10 @@ func TestCachedSchemaRegistryClient_GetVersions(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	versions, err := client.GetVersions(testObject.Subject)
 	if nil != err {
 		t.Errorf("Error getting versions: %v", err)
@@ -54,7 +63,10 @@ func TestCachedSchemaRegistryClient_GetSchemaByVersion(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	responseCodec, err := client.GetSchemaByVersion(testObject.Subject, 1)
 	if nil != err {
 		t.Errorf("Error getting schema versions: %v", err)
@@ -68,7 +80,10 @@ func TestCachedSchemaRegistryClient_GetLatestSchema(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	responseCodec, err := client.GetLatestSchema(testObject.Subject)
 	if nil != err {
 		t.Errorf("Error getting latest schema: %v", err)
@@ -82,7 +97,10 @@ func TestCachedSchemaRegistryClient_CreateSubject(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	id, err := client.CreateSubject(testObject.Subject, testObject.Codec)
 	if nil != err {
 		t.Errorf("Error getting schema: %s", err.Error())
@@ -106,7 +124,10 @@ func TestCachedSchemaRegistryClient_IsSchemaRegistered(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	id, err := client.IsSchemaRegistered(testObject.Subject, testObject.Codec)
 	if nil != err {
 		t.Errorf("Error getting schema id: %v", err)
@@ -123,7 +144,10 @@ func TestCachedSchemaRegistryClient_DeleteSubject(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	err := client.DeleteSubject(testObject.Subject)
 	if nil != err {
 		t.Errorf("Error delete subject: %v", err)
@@ -134,7 +158,10 @@ func TestCachedSchemaRegistryClient_DeleteVersion(t *testing.T) {
 	testObject := createSchemaRegistryTestObject(t, "test", 1)
 	mockServer := testObject.MockServer
 	defer mockServer.Close()
-	client := NewCachedSchemaRegistryClient([]string{mockServer.URL})
+	saslConfig := &SASLConfig{
+		Username: "test",
+	}
+	client := NewCachedSchemaRegistryClient([]string{mockServer.URL}, saslConfig)
 	err := client.DeleteVersion(testObject.Subject, 1)
 	if nil != err {
 		t.Errorf("Error delete version: %v", err)

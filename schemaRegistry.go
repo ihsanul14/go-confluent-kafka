@@ -2,11 +2,13 @@ package kafka
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -31,6 +33,7 @@ type SchemaRegistryClient struct {
 	SchemaRegistryConnect []string
 	httpClient            *http.Client
 	retries               int
+	SASL                  *SASLConfig
 }
 
 type schemaResponse struct {
@@ -64,19 +67,23 @@ const (
 
 // NewSchemaRegistryClient creates a client to talk with the schema registry at the connect string
 // By default it will retry failed requests (5XX responses and http errors) len(connect) number of times
-func NewSchemaRegistryClient(connect []string) *SchemaRegistryClient {
+func NewSchemaRegistryClient(connect []string, saslConfig *SASLConfig) *SchemaRegistryClient {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout:   timeout,
+		Transport: tr,
 	}
-	return &SchemaRegistryClient{connect, client, len(connect)}
+	return &SchemaRegistryClient{connect, client, len(connect), saslConfig}
 }
 
 // NewSchemaRegistryClientWithRetries creates an http client with a configurable amount of retries on 5XX responses
-func NewSchemaRegistryClientWithRetries(connect []string, retries int) *SchemaRegistryClient {
+func NewSchemaRegistryClientWithRetries(connect []string, retries int, saslConfig *SASLConfig) *SchemaRegistryClient {
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	client := &http.Client{
-		Timeout: timeout,
+		Timeout:   timeout,
+		Transport: tr,
 	}
-	return &SchemaRegistryClient{connect, client, retries}
+	return &SchemaRegistryClient{connect, client, retries, saslConfig}
 }
 
 // GetSchema returns a goavro.Codec by unique id
@@ -193,15 +200,22 @@ func parseID(str []byte) (int, error) {
 }
 
 func (client *SchemaRegistryClient) httpCall(method, uri string, payload io.Reader) ([]byte, error) {
-	nServers := len(client.SchemaRegistryConnect)
-	offset := rand.Intn(nServers)
+	nServers := int64(len(client.SchemaRegistryConnect))
+	n, err := rand.Int(rand.Reader, big.NewInt(nServers))
+	if err != nil {
+		return nil, err
+	}
+	offset := n.Int64()
 	for i := 0; ; i++ {
-		url := fmt.Sprintf("%s%s", client.SchemaRegistryConnect[(i+offset)%nServers], uri)
+		url := fmt.Sprintf("%s%s", client.SchemaRegistryConnect[(int64(i)+offset)%nServers], uri)
 		req, err := http.NewRequest(method, url, payload)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", contentType)
+		if client.SASL != nil {
+			req.SetBasicAuth(client.SASL.Username, client.SASL.Password)
+		}
 		resp, err := client.httpClient.Do(req)
 		if resp != nil {
 			defer resp.Body.Close()
